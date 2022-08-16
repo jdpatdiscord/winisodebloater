@@ -5,6 +5,8 @@ param (
         [String]$WorkingDir,
     [Parameter(Mandatory=$true, HelpMessage="Specify which Windows edition.")] 
         [String]$Edition,
+    [Parameter(Mandatory=$true, HelpMessage="Product key for target Windows edition.")] 
+        [String]$ProductKey,
     [Parameter(HelpMessage="Leave work like folders and files behind.")] 
         [Switch]$Breadcrumbs = $false
 )
@@ -197,10 +199,6 @@ $unattend_xml_content = @"
     <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
       <UserData>
         <AcceptEula>true</AcceptEula>
-        <ProductKey>
-          <Key>blank</Key>
-          <WillShowUI>OnError</WillShowUI>
-        </ProductKey>
       </UserData>
     </component>
     <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -231,7 +229,7 @@ $unattend_xml_content = @"
           </LocalAccount>
         </LocalAccounts>
       </UserAccounts>
-      <ProductKey>blank</ProductKey>
+      <ProductKey>$($ProductKey)</ProductKey>
       <OOBE>
         <HideEULAPage>true</HideEULAPage>
         <ProtectYourPC>3</ProtectYourPC>
