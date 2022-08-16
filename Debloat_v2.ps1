@@ -199,6 +199,10 @@ $unattend_xml_content = @"
     <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
       <UserData>
         <AcceptEula>true</AcceptEula>
+        <ProductKey>
+          <Key>$($ProductKey)</Key>
+          <WillShowUI>OnError</WillShowUI>
+        </ProductKey>
       </UserData>
     </component>
     <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -236,8 +240,6 @@ $unattend_xml_content = @"
         <HideLocalAccountScreen>true</HideLocalAccountScreen>
         <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
         <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
-        <SkipUserOOBE>true</SkipUserOOBE>
-        <SkipMachineOOBE>true</SkipMachineOOBE>
         <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
       </OOBE>
     </component>
