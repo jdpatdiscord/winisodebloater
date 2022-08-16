@@ -9,7 +9,7 @@ param (
         [Switch]$Breadcrumbs = $false
 )
 
-$IsoURL = "https://software.download.prss.microsoft.com/dbazure/Win10_21H2_English_x64.iso?t=67e364a7-f7a3-4301-8dee-86083e27302e&e=1659006240&h=63a3e8e80c0ba650f16771138553065b29c1842b46687e2005a053cb1c1c9a38"
+$IsoURL = "https://tb.rg-adguard.net/dl.php?go=ba3275f9"
 
 $DesiredEdition = $Edition
 
@@ -44,11 +44,11 @@ if (!(Test-Path -Path "$($WorkingDir)\$($INPUT_ISO)"))
         Invoke-WebRequest -Uri $IsoURL -OutFile "$($WorkingDir)\$($INPUT_ISO)" | Out-Null
     } Catch [System.Net.WebException] {
         Echo "An error occured when downloading the Windows 10 .ISO. Please go to the following link:`r`nhttps://tb.rg-adguard.net/public.php and refresh the link, or source a new download for the image."
+        Return
     } Catch [System.IO.IOException] {
         Echo "Could not write file to disk. Check permissions."
+        Return
     }
-
-    Return
 }
 
 
@@ -249,7 +249,7 @@ $unattend_xml_content = @"
 
 Out-File -Force -Encoding utf8 -FilePath "$($WorkingDir)\unattend.xml" -InputObject $unattend_xml
 
-$DismApplyUnattendResult = Dism /Image:$MountedFS_Dir /Apply-Unattend:"$($WorkingDir)\unattend.xml"
+<#$DismApplyUnattendResult = Dism /Image:$MountedFS_Dir /Apply-Unattend:"$($WorkingDir)\unattend.xml"
 
 if ($DismApplyUnattendResult.Contains("formatting errors"))
 {
@@ -260,7 +260,7 @@ if ($DismApplyUnattendResult.Contains("formatting errors"))
     icacls "$($MountedFS_Dir)\Windows\Panther" /setowner "NT AUTHORITY\SYSTEM" | Out-Null
 
     Debug-Print -Msg "dism.exe thinks the provided unattend.xml is invalid. Please review it carefully. The file has been forcefully applied."
-}
+}#>
 
 #
 
@@ -465,6 +465,8 @@ if (-not $Breadcrumbs)
 
 Debug-Print -Msg "Replacing install.wim"
 Copy-Item -Force -Path $Installation_WIM_Mirror_Path -Destination "$($WorkingDir)\temp_iso\sources\install.wim"
+
+Copy-Item -Force -Path "$($WorkingDir)\unattend.xml" -Destination "$($WorkingDir)\temp_iso\autounattend.xml"
 
 $old_path = $env:Path
 $env:Path += ";C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\AMD64\DISM;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\AMD64\Imaging;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\AMD64\BCDBoot;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\AMD64\Oscdimg;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\AMD64\Wdsmcast;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\HelpIndexer;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\WSIM;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Windows Preinstallation Environment;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Imaging and Configuration Designer\x86"
