@@ -197,8 +197,26 @@ $unattend_xml_content = @"
 <unattend xmlns="urn:schemas-microsoft-com:unattend">
   <settings pass="windowsPE">
     <component name="Microsoft-Windows-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <Diagnostics>
+        <OptIn>false</OptIn>
+      </Diagnostics>
+      <DynamicUpdate>
+        <Enable>false</Enable>
+        <WillShowUI>OnError</WillShowUI>
+      </DynamicUpdate>
+      <ImageInstall>
+        <OSImage>
+          <WillShowUI>OnError</WillShowUI>
+          <InstallFrom>
+            <MetaData wcm:action="add">
+              <Key>/IMAGE/NAME</Key>
+              <Value>$($Edition)</Value>
+            </MetaData>
+          </InstallFrom>
+        </OSImage>
+      </ImageInstall>
       <UserData>
-        <AcceptEula>true</AcceptEula>
+        <AcceptEula>false</AcceptEula>
         <ProductKey>
           <Key>$($ProductKey)</Key>
           <WillShowUI>OnError</WillShowUI>
@@ -206,13 +224,13 @@ $unattend_xml_content = @"
       </UserData>
     </component>
     <component name="Microsoft-Windows-International-Core-WinPE" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <SystemLocale>en-US</SystemLocale>
+      <UILanguage>en-US</UILanguage>
+      <UILanguageFallback>en-US</UILanguageFallback>
+      <UserLocale>en-US</UserLocale>
       <SetupUILanguage>
         <UILanguage>en-US</UILanguage>
       </SetupUILanguage>
-      <InputLocale>en-US</InputLocale>
-      <UILanguage>en-US</UILanguage>
-      <SystemLocale>en-US</SystemLocale>
-      <UserLocale>en-US</UserLocale>
     </component>
   </settings>
   <settings pass="oobeSystem">
@@ -235,11 +253,12 @@ $unattend_xml_content = @"
       </UserAccounts>
       <ProductKey>$($ProductKey)</ProductKey>
       <OOBE>
-        <HideEULAPage>true</HideEULAPage>
+        <HideEULAPage>false</HideEULAPage>
         <ProtectYourPC>3</ProtectYourPC>
-        <HideLocalAccountScreen>true</HideLocalAccountScreen>
+        <HideLocalAccountScreen>false</HideLocalAccountScreen>
         <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
         <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+        <NetworkLocation>Home</NetworkLocation>
         <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
       </OOBE>
     </component>
