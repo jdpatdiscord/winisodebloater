@@ -7,6 +7,10 @@ param (
         [String]$Edition,
     [Parameter(Mandatory=$true, HelpMessage="Product key for target Windows edition.")] 
         [String]$ProductKey,
+    [Parameter(ParameterSetName='RemoteISO', Mandatory=$false, HelpMessage="Link to the reference .ISO file to download.")]
+        [String]$RemoteISO,
+    [Parameter(ParameterSetName='LocalISO', Mandatory=$false, HelpMessage="File path to the .ISO file.")]
+        [String]$LocalISO,
     [Parameter(HelpMessage="Leave work like folders and files behind.")] 
         [Switch]$Breadcrumbs = $false
 )
@@ -42,20 +46,29 @@ if (!(Test-Path -Path "$($WorkingDir)\$($INPUT_ISO)"))
 {
     Try
     {
-        Debug-Print -Msg "Downloading .ISO"
-        Invoke-WebRequest -Uri $IsoURL -OutFile "$($WorkingDir)\$($INPUT_ISO)" | Out-Null
+		if ($PSCmdlet.ParameterSetName -eq "RemoteISO")
+		{
+			Debug-Print -Msg "Downloading .ISO"
+			Invoke-WebRequest -Uri $RemoteISO -OutFile "$($WorkingDir)\$($INPUT_ISO)" | Out-Null
+		}
+		if ($PSCmdlet.ParameterSetName -eq "LocalISO")
+		{
+			Debug-Print -Msg "Copying .ISO"
+			Copy-Item -Path $LocalISO -Destination "$($WorkingDir)\$($INPUT_ISO)"
+		}
+		
     } Catch [System.Net.WebException] {
         Echo "An error occured when downloading the Windows 10 .ISO. Please go to the following link:`r`nhttps://tb.rg-adguard.net/public.php and refresh the link, or source a new download for the image."
         Return
     } Catch [System.IO.IOException] {
-        Echo "Could not write file to disk. Check permissions."
+        Echo "Could not read/write file to disk. Check permissions."
         Return
     }
 }
 
 
 $DeploymentTools_Path = "${env:ProgramFiles(x86)}\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\"
-$CopyPE_Path = "${env:ProgramFiles(x86)}\Windows Kits\10\Assessment and Deployment Kit\Windows Preinstallation Environment"
+#$CopyPE_Path = "${env:ProgramFiles(x86)}\Windows Kits\10\Assessment and Deployment Kit\Windows Preinstallation Environment"
 
 if (!(Test-Path -Path $DeploymentTools_Path))
 {
@@ -70,13 +83,16 @@ $MountResult = Mount-DiskImage -ImagePath (Resolve-Path -Path "$($WorkingDir)\$(
 $DriveLetter = ($MountResult | Get-Volume).DriveLetter
 
 $Installation_WIM_Path = Resolve-Path -Path "$($DriveLetter):\sources\install.wim"
+$Installation_ESD_Path = Resolve-Path -Path "$($DriveLetter):\sources\install.esd"
 $Boot_WIM_Path = Resolve-Path -Path "$($DriveLetter):\sources\boot.wim"
 
-if (!(Test-Path -Path $Installation_WIM_Path) -or !(Test-Path -Path $Boot_WIM_Path))
+$
+
+if ( !(Test-Path -Path $Installation_WIM_Path) -and !(Test-Path -Path $Installation_ESD_Path) )
 {
-    Echo "Either the installation or boot image are missing, you may have a bad .ISO. If you think this is an issue, proceed to contact the author."
-    Dismount-DiskImage -ImagePath (Resolve-Path -Path "$($WorkingDir)\$($INPUT_ISO)")
-    Return
+	Echo "Both possible image files install.esd and install.wim are missing, you may have a bad .ISO."
+	Dismount-DiskImage -ImagePath (Resolve-Path -Path "$($WorkingDir)\$($INPUT_ISO)")
+	Return
 }
 
 $Installation_WIM_Mirror_Path = "$($WorkingDir)\install_copy.wim"
@@ -209,14 +225,14 @@ $unattend_xml_content = @"
           <WillShowUI>OnError</WillShowUI>
           <InstallFrom>
             <MetaData wcm:action="add">
-              <Key>/IMAGE/NAME</Key>
-              <Value>$($Edition)</Value>
+              <Key>/IMAGE/INDEX</Key>
+              <Value>1</Value>
             </MetaData>
           </InstallFrom>
         </OSImage>
       </ImageInstall>
       <UserData>
-        <AcceptEula>false</AcceptEula>
+        <AcceptEula>true</AcceptEula>
         <ProductKey>
           <Key>$($ProductKey)</Key>
           <WillShowUI>OnError</WillShowUI>
@@ -253,7 +269,7 @@ $unattend_xml_content = @"
       </UserAccounts>
       <ProductKey>$($ProductKey)</ProductKey>
       <OOBE>
-        <HideEULAPage>false</HideEULAPage>
+        <HideEULAPage>true</HideEULAPage>
         <ProtectYourPC>3</ProtectYourPC>
         <HideLocalAccountScreen>false</HideLocalAccountScreen>
         <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
@@ -266,9 +282,10 @@ $unattend_xml_content = @"
 </unattend>
 "@
 
+# Applied later on
 Out-File -Force -Encoding utf8 -FilePath "$($WorkingDir)\unattend.xml" -InputObject $unattend_xml
 
-<#$DismApplyUnattendResult = Dism /Image:$MountedFS_Dir /Apply-Unattend:"$($WorkingDir)\unattend.xml"
+#$DismApplyUnattendResult = Dism /Image:$MountedFS_Dir /Apply-Unattend:"$($WorkingDir)\unattend.xml"
 
 if ($DismApplyUnattendResult.Contains("formatting errors"))
 {
@@ -446,16 +463,21 @@ Out-File -Force `
          -FilePath "$($MountedFS_Dir)\Users\Default\AppData\Local\Microsoft\Windows\Shell\LayoutModification.xml" `
          -InputObject $LayoutModification_xml_content
 
+
+# Would be iso -> version -> C:\autounattend.xml
+Out-File -Force -Encoding utf8 -FilePath "$($MountedFS_Dir)\autounattend.xml" -InputObject $unattend_xml
 #Dism /Quiet /Image:$MountedFS_Dir /Apply-Unattend:"$($WorkingDir)\unattend.xml"
 
 Debug-Print -Msg "Committing changes to .WIM"
 Dism /Quiet /Unmount-image /MountDir:$MountedFS_Dir /Commit
 
-Debug-Print -Msg "Extracting .ISO"
+#
 
 $7z_bat = @"
 "$env:ProgramFiles\7-Zip\7z.exe" x -y -o$($WorkingDir)\temp_iso "$($WorkingDir)\$($INPUT_ISO)"
 "@
+
+Debug-Print -Msg "Extracting .ISO"
 
 Out-File -Encoding utf8 -FilePath "$($WorkingDir)\7z.bat" -InputObject $7z_bat
 
@@ -485,7 +507,7 @@ if (-not $Breadcrumbs)
 Debug-Print -Msg "Replacing install.wim"
 Copy-Item -Force -Path $Installation_WIM_Mirror_Path -Destination "$($WorkingDir)\temp_iso\sources\install.wim"
 
-Copy-Item -Force -Path "$($WorkingDir)\unattend.xml" -Destination "$($WorkingDir)\temp_iso\autounattend.xml"
+#Copy-Item -Force -Path "$($WorkingDir)\unattend.xml" -Destination "$($WorkingDir)\temp_iso\autounattend.xml"
 
 $old_path = $env:Path
 $env:Path += ";C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\AMD64\DISM;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\AMD64\Imaging;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\AMD64\BCDBoot;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\AMD64\Oscdimg;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\AMD64\Wdsmcast;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\HelpIndexer;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\WSIM;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Windows Preinstallation Environment;C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Imaging and Configuration Designer\x86"
